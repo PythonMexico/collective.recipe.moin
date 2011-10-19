@@ -1,4 +1,9 @@
 *~
 *.pyc
 .DS_Store
-plonetheme.pythonmexico.egg-info/
+.installed.cfg
+collective.recipe.moin.egg-info/
+parts/
+develop-eggs/
+bin/
+
