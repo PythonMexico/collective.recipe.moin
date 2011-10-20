@@ -6,4 +6,4 @@ collective.recipe.moin.egg-info/
 parts/
 develop-eggs/
 bin/
-
+var/
