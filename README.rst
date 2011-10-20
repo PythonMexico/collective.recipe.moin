@@ -7,26 +7,29 @@ a entry point for the wiki engine `MoinMoin`_
 Installation
 ============
 
-It is very simple to use. This is a minimal ''buildout.cfg'' file::
+It is very simple to use. This is a minimal ''buildout.cfg'' file:::
 
     [buildout]
-    parts = wikiapp
+    parts = wiki
 
-    [wikiapp]
+    [wiki]
     recipe = collective.recipe.moin
     protocol = wsgi
-    title = My Wiki
+    sitename = 'Untitled Wiki'
+    language_default = en
+    theme_default = modern
+
 
 This will create a folder in parts/ called ``wikiapp`` that contain the egg folder, the config file and the web server deployment file.
 
-When you have a previous config file you can use this:
+When you have a previous config file you can use this::
 
     [buildout]
-    parts = wikiapp
+    parts = wiki
 
-    [wikiapp]
+    [wiki]
     recipe = collective.recipe.moin
-    config = /some/path/to/wikiconfig.py
+    config = /some/path/to/wikiconfig
     protocol = wsgi
 
 Parameters
