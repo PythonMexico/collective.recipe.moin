@@ -3,6 +3,7 @@ import sys
 import shutil
 import pkg_resources
 import logging
+import re
 import stat
 import zc.buildout
 import zc.recipe.egg
@@ -20,19 +21,24 @@ class Recipe:
             'download-cache',
             os.path.join(buildout['buildout']['directory'], 'downloads'))
 
-        options['location'] = os.path.join( 
-            buildout['buildout']['parts-directory'],
-            self.name,
+        self.location = options['location'] = os.path.join( 
+                buildout['buildout']['parts-directory'],
+                self.name,
             )
-
-        options['bin-directory'] = buildout['buildout']['bin-directory']
         
-        self.location = os.path.join(
-                                    self.buildout["buildout"]["parts-directory"], 
-                                    self.name
-                        )
+        self.location = options['location']
+        
+        if 'data_dir' in options:
+            self.data_dir = options['data_dir']
+        else:    
+            self.data_dir = os.path.join(
+                                    self.buildout['buildout']['directory']
+                                    ,'var',
+                                    self.name,)
+                                    
+            options['data_dir'] = self.data_dir
 
-        if options.has_key('eggs'):
+        if 'eggs' in options:
             options['eggs'] += '\nmoin'
         else:
             options['eggs'] = 'moin'
@@ -46,8 +52,7 @@ class Recipe:
                 shutil.rmtree(self.location)
         
         self.make_wiki_bin()
-        self.copy_data_wiki()
-        
+                
         protocol = self.options.get('protocol', None)
         if protocol:
             if protocol == 'fcgi':
@@ -60,7 +65,10 @@ class Recipe:
                 
         else:
             self.logger.warning("'protocol' is not defined")
-                    
+        
+        self.copy_data_wiki()
+        self.make_wiki_config()
+        
         return self.options.created()
 
 
@@ -81,9 +89,33 @@ class Recipe:
         )
         
         
-    def make_wiki_conf(self):
-        pass
-                    
+    def make_wiki_config(self):
+        template = WIKI_CONFIG
+        if 'wiki_config' in self.options:
+            template = open(self.options['wiki_config']).read()
+        
+        if not 'sitename' in self.options:
+            self.options['sitename'] = 'Untitled Wiki'
+            
+        if not 'language_default' in self.options:
+            self.options['language_default'] = 'en'
+            
+        if not 'page_front_page' in self.options:
+            self.options['page_front_page'] = 'FrontPage'
+            
+        template=re.sub(r"\$\{([^:]+?)\}", r"${%s:\1}" % self.name, template)
+        output = self.options._sub(template, [])
+        
+        target = os.path.join(self.location, 'wikiconfig.py')
+        
+        if not os.path.exists(self.location):
+            os.mkdir(self.location)
+            self.options.created(self.location)
+        
+        f = open(target, "wt")
+        f.write(output)
+        f.close()
+                            
     def make_protocol_script(self, template, script):
         output = template % { 'syspath': self.get_eggs_paths() }
         
@@ -114,13 +146,8 @@ class Recipe:
         moin_egg    = ws.find( pkg_resources.Requirement.parse('moin') )
         moin_location = os.path.join(moin_egg.location, 'share', 'moin')
 
-        data_dir = self.options.get('data_dir', os.path.join(
-                                    self.buildout['buildout']['directory']
-                                    ,'var',
-                                    self.name,))
-
-        if not os.path.exists(data_dir):
-            os.makedirs(data_dir)
+        if not os.path.exists(self.data_dir):
+            os.makedirs(self.data_dir)
         else:
             self.logger.info("Nothing to copy")
             return
@@ -132,12 +159,14 @@ class Recipe:
         os.chdir(moin_location)
         try:
             try:
-                os.path.walk(os.curdir, self.copydir, data_dir)
+                os.path.walk(os.curdir, self.copydir, self.data_dir)
             finally:
                 os.chdir(pwd)
+            
         except (IOError, OSError), msg:
             print >>sys.stderr, msg
             sys.exit(1)
+            
 
 
     def copydir(self, targetdir, sourcedir, names):
@@ -190,5 +219,54 @@ WSGIServer(application).run()
 """
 
 WIKI_CONFIG = """
+# -*- coding: utf-8 -*-
+
+import os
+
+from MoinMoin.config import multiconfig, url_prefix_static
+
+
+class Config(multiconfig.DefaultConfig):
+    wikiconfig_dir = os.path.abspath(os.path.dirname(__file__))
+    instance_dir = '${data_dir}'
+    data_dir = os.path.join(instance_dir, 'data', '') # path with trailing /
+    data_underlay_dir = os.path.join(instance_dir, 'underlay', '') # path with trailing /
+    #url_prefix_static = '/mywiki' + url_prefix_static
+
+    sitename = u'${sitename}'
+    logo_string = u'<img src="%s/common/moinmoin.png" alt="MoinMoin Logo">' % url_prefix_static
+    page_front_page = u'${page_front_page}'
+    
+    navi_bar = [
+        #u'%(page_front_page)s',
+        u'RecentChanges',
+        u'FindPage',
+        u'HelpContents',
+    ]
+
+    theme_default = 'modern'
+    language_default = '${language_default}'
+
+    page_category_regex = ur'(?P<all>Category(?P<key>(?!Template)\S+))'
+    page_dict_regex = ur'(?P<all>(?P<key>\S+)Dict)'
+    page_group_regex = ur'(?P<all>(?P<key>\S+)Group)'
+    page_template_regex = ur'(?P<all>(?P<key>\S+)Template)'
+
+    show_hosts = 1
+
+    #interwikiname = u'UntitledWiki'
+    #show_interwiki = 1
+
+    #superuser = [u"YourName", ]
+
+    #acl_rights_before = u"YourName:read,write,delete,revert,admin"
+
+    #password_checker = None # None means "don't do any password strength checks"
+
+    #mail_smarthost = ""
+    #mail_from = u""
+    #mail_login = ""
+
+    #chart_options = {'width': 600, 'height': 300}
 
 """
