@@ -1,7 +1,7 @@
 from setuptools import setup, find_packages
 import os
 
-version = '1.0'
+version = '0.7'
 
 tests_require = ['zope.testing', 'zc.buildout']
 
@@ -24,9 +24,10 @@ setup(name='collective.recipe.moin',
       packages=find_packages(exclude=['ez_setup']),
       namespace_packages=['collective', 'collective.recipe'],
       include_package_data=True,
-      zip_safe=False,
+      zip_safe=True,
       install_requires=[
           'setuptools',
+          'zc.buildout',
           'zc.recipe.egg',
       ],
       entry_points="""

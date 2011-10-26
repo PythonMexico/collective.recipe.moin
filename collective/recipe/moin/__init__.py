@@ -96,6 +96,9 @@ class Recipe:
         
         if not 'sitename' in self.options:
             self.options['sitename'] = 'Untitled Wiki'
+        
+        if not 'mount' in self.options:
+            self.options['mount'] = ''
             
         if not 'language_default' in self.options:
             self.options['language_default'] = 'en'
@@ -231,7 +234,7 @@ class Config(multiconfig.DefaultConfig):
     instance_dir = '${data_dir}'
     data_dir = os.path.join(instance_dir, 'data', '') # path with trailing /
     data_underlay_dir = os.path.join(instance_dir, 'underlay', '') # path with trailing /
-    #url_prefix_static = '/mywiki' + url_prefix_static
+    url_prefix_static = '${mount}' + url_prefix_static
 
     sitename = u'${sitename}'
     logo_string = u'<img src="%s/common/moinmoin.png" alt="MoinMoin Logo">' % url_prefix_static
